@@ -102,7 +102,7 @@ contains
    nrm=dnrm2(size(s),s,1)
    bound=tol*tol*nrm*nrm
    er=er2+s(r)*s(r)
-   do while(er.lt.bound)
+   do while(er.le.bound .and. r .gt. 1)
     er2=er; r=r-1; er=er+s(r)*s(r)
    end do
   end if
