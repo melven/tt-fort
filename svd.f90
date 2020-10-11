@@ -18,14 +18,20 @@ contains
   real(8),allocatable :: b(:,:),work(:),ss(:),uu(:,:),vv(:,:)
   integer :: m,n,mn,lwork,ierr,r,i,j
   real(8),external :: dnrm2
+  integer,allocatable :: iwork(:)
   m=size(a,1); n=size(a,2); mn=min(m,n); lwork=256*max(m,n)
-  allocate(uu(m,mn),vv(mn,n),ss(mn),b(m,n),work(lwork),stat=ierr)
+  allocate(uu(m,mn),vv(mn,n),ss(mn),b(m,n),iwork(8*mn),stat=ierr)
   if(ierr.ne.0)then;write(*,*)subnam,': cannot allocate';stop;endif
   call dcopy(m*n,a,1,b,1)
-  call dgesvd('s','s',m,n,b,m,ss,uu,m,vv,mn,work,lwork,ierr)
+  ! work size query
+  call dgesdd('s',m,n,b,m,ss,uu,m,vv,mn,work,-1,iwork,ierr)
+  lwork = nint(work(1))+1
+  allocate(work(lwork),stat=ierr)
+  if(ierr.ne.0)then;write(*,*)subnam,': cannot allocate';stop;endif
+  call dgesdd('s',m,n,b,m,ss,uu,m,vv,mn,work,lwork,iwork,ierr)
   if(present(info))info=ierr
   if(ierr.ne.0)then
-   write(*,*)subnam,': dgesvd info: ',ierr
+   write(*,*)subnam,': dgesdd info: ',ierr
    if(ierr.lt.0)stop
    if(nan(a))then
     write(*,*) subnam,': NaNs detected in the input array'

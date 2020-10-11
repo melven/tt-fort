@@ -286,6 +286,7 @@ contains
     else 
        allocate(C(n3,n2,n1))
     end if
+!$omp parallel do collapse(2) schedule(static)
     do i1 = 1,n1
        do i2 = 1,n2
           do i3 = 1,n3

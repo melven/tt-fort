@@ -21,6 +21,7 @@ contains
     integer :: i, rnew, M, k, nn
     integer :: lwork, info
     double precision, allocatable :: work(:)
+    integer, allocatable :: iwork(:)
     M = product(n(2:d))
     lwork = 0
     r(1) = 1
@@ -34,8 +35,10 @@ contains
            lwork = 256*max(M, r(i)*n(i))
            if ( allocated(work) ) then
               deallocate(work)
+              deallocate(iwork)
            end if
            allocate(work(lwork))
+           allocate(iwork(8*min(M, r(i)*n(i))))
         end if
         if ( rnew > rmax ) then
            deallocate(sv)
@@ -44,7 +47,7 @@ contains
         end if
         allocate(cr(i)%p(r(i)*n(i)*rnew))
         print *,'i=',i,'M=',M,'rnew=',rnew
-        call dgesvd('s','o',r(i)*n(i),M,a,r(i)*n(i),sv,cr(i)%p,r(i)*n(i), a, rnew, work, lwork, info)
+        call dgesdd('o',r(i)*n(i),M,a,r(i)*n(i),sv,cr(i)%p,r(i)*n(i), a, rnew, work, lwork, iwork, info)
         if ( info .ne. 0 ) then
            print *,'tt2 full_to_tt failed with info=',info
            exit

@@ -257,20 +257,29 @@ contains
   double precision,allocatable :: work(:),s(:),mat(:),u(:)
   double precision :: err,nrm
   double precision,external :: dnrm2
+  integer, allocatable :: iwork(:)
 
   l=arg%l; m=arg%m
   if(m.le.l)return
   r=>arg%r; n=>arg%n
   nn=maxval(n(l:m)); rr=maxval(r(l-1:m))
-  lwork=128*nn*rr
-  allocate(work(lwork),s(nn*rr), mat(rr*nn*rr),u(rr*nn*rr), stat=info)
+  lwork=128*(nn+rr)*rr
+  allocate(iwork(8*nn*rr), work(lwork),s(nn*rr), mat(rr*nn*rr),u(rr*nn*rr), stat=info)
   if(info.ne.0)then;write(*,*)subnam,': no memory';stop;endif
 
   call dtt_ort(arg)
   do k=m,l+1,-1
    mm=r(k-1); nn=n(k)*r(k); mn=min(mm,nn); kk=r(k-2)*n(k-1)
-   call dgesvd('s','s',mm,nn,arg%u(k)%p,mm,s,mat,mm,u,mn,work,lwork,info)
-   if(info.ne.0)then; write(*,*)subnam,': dgesvd info: ',info; stop; end if
+   ! work size query
+   call dgesdd('s',mm,nn,arg%u(k)%p,mm,s,mat,mm,u,mn,work,-1,iwork,info)
+   if( work(1) > lwork ) then
+     lwork = nint(work(1))+1
+     deallocate(work)
+     allocate(work(lwork), stat=info)
+     if(info.ne.0)then;write(*,*)subnam,': no memory';stop;endif
+   end if
+   call dgesdd('s',mm,nn,arg%u(k)%p,mm,s,mat,mm,u,mn,work,lwork,iwork,info)
+   if(info.ne.0)then; write(*,*)subnam,': dgesdd info: ',info; stop; end if
    rr=chop(s(1:mn), tol/dsqrt(dble(m-l)))
    if (present(rmax)) then 
       rr = min(rr, rmax)
@@ -319,7 +328,7 @@ contains
   do k=m,l+1,-1
    mm=r(k-1); nn=n(k)*r(k); mn=min(mm,nn); kk=r(k-2)*n(k-1)
    call zgesvd('s','s',mm,nn,arg%u(k)%p,mm,s,mat,mm,u,mn,work,lwork,rwork,info)
-   if(info.ne.0)then; write(*,*)subnam,': dgesvd info: ',info; stop; end if
+   if(info.ne.0)then; write(*,*)subnam,': zgesvd info: ',info; stop; end if
    rr=chop(s(1:mn),tol/dsqrt(dble(m-l)))
    if (present(rmax)) then
       rr = min(rr, rmax)
@@ -369,7 +378,7 @@ contains
   do k=m,l+1,-1
    mm=r(l-1)*product(tt%n(l:k-1)); nn=tt%n(k)*r(k); mn=min(mm,nn)
    call dgesvd('o','s',mm,nn,b,mm,s,b,1,u,mn,work,lwork,info)
-   if(info.ne.0)then;write(*,*)subnam,': info: ',info;stop;endif
+   if(info.ne.0)then;write(*,*)subnam,': dgesvd info: ',info;stop;endif
    !r(k-1)=chop(s(1:mn),tol/dsqrt(dble(m-l+1)))
    if(s(1).ne.0.d0)then 
        r(k-1)=chop(s(1:mn), tol/dsqrt(dble(m-l)))
